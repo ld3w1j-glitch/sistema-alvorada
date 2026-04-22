@@ -1040,9 +1040,9 @@ def ajustar_estoque(stock_item_id: int) -> Response:
 @app.post("/estoque/<int:stock_item_id>/remover")
 @login_required
 def remover_item_estoque(stock_item_id: int) -> Response:
-    if g.user["role"] not in {"admin", "balanco"}:
-        flash("Sem permissão para remover item do estoque.", "error")
-        return redirect(url_for("dashboard"))
+    if g.user["role"] != "admin":
+        flash("Apenas o admin pode remover item do estoque.", "error")
+        return redirect(url_for("estoque"))
 
     redirect_q = request.form.get("redirect_q", "").strip()
     redirect_somente = "1" if request.form.get("redirect_somente_com_saldo") == "1" else "0"

@@ -92,11 +92,13 @@
               <input type="text" name="nova_quantidade" placeholder="Nova quantidade" required>
               <button class="btn-secondary" type="submit">Ajustar qtd.</button>
             </form>
+            {% if g.user['role'] == 'admin' %}
             <form method="post" action="{{ url_for('remover_item_estoque', stock_item_id=item.id) }}">
               <input type="hidden" name="redirect_q" value="{{ termo_busca or '' }}">
               <input type="hidden" name="redirect_somente_com_saldo" value="{% if somente_com_saldo %}1{% else %}0{% endif %}">
               <button class="btn-danger" type="submit">Remover</button>
             </form>
+            {% endif %}
           </div>
         </article>
         {% else %}
