@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title or 'Controle de Separação' }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+  {% if g.user %}
+    {% include 'partials/_topbar.html' %}
+  {% endif %}
+
+  <div class="wrap flash-wrap">
+    {% include 'partials/_flash.html' %}
+  </div>
+
+  {% block content %}{% endblock %}
+
+</body>
+</html>

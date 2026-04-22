@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="main"><div class="wrap grid-2">
+  <div class="card">
+    <h1 class="section-title">Criar separações</h1>
+    <form method="post">
+      <input type="text" name="lote_nome" placeholder="Nome do lote" required>
+      <input type="date" name="data_referencia" value="{{ hoje }}" required>
+      <select name="responsavel_id" required>
+        <option value="">Responsável</option>
+        {% for u in separadores %}<option value="{{ u.id }}">{{ u.nome }}</option>{% endfor %}
+      </select>
+      {% if usar_conferente %}
+      <select name="conferente_id">
+        <option value="">Conferente</option>
+        {% for u in conferentes %}<option value="{{ u.id }}">{{ u.nome }}</option>{% endfor %}
+      </select>
+      {% endif %}
+      <label class="check-line"><input type="checkbox" name="usar_estoque" value="1" checked> Usar controle de estoque neste lote</label>
+      <label class="check-line"><input type="checkbox" name="trazer_pendencias" value="1" {% if trazer_pendencias_padrao %}checked{% endif %}> Trazer automaticamente o restante pendente de separações parciais anteriores</label>
+      <textarea name="observacao" placeholder="Observação"></textarea>
+      <div>
+        <p class="muted">Selecione as lojas:</p>
+        <div class="checkbox-grid">
+          {% for store in stores %}
+            <label class="check-line"><input type="checkbox" name="stores" value="{{ store.id }}"> {{ store.nome }}</label>
+          {% endfor %}
+        </div>
+      </div>
+      <button type="submit">Criar separações</button>
+    </form>
+  </div>
+  <div class="card">
+    <h2 class="section-title">Como funciona</h2>
+    <p class="muted">Depois de criar, o sistema abre a tela única do lote para lançar um produto uma vez e distribuir quantidades diferentes por loja.</p>
+  </div>
+</div></section>
+{% endblock %}

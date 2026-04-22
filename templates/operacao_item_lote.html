@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="main"><div class="wrap">
+  <div class="card">
+    <div class="toolbar">
+      <div>
+        <h1 class="section-title">{{ 'Separação por item' if modo == 'separacao' else 'Conferência por item' }}</h1>
+        <div class="muted">
+          {{ separacoes[0].lote_nome }} • {{ separacoes[0].data_referencia }} • Responsável: {{ responsavel_nome or '-' }} • Conferente: {{ conferente_nome or '-' }}
+        </div>
+      </div>
+      <div class="inline operation-top-actions">
+        <a class="btn btn-secondary" href="{{ url_for('listar_separacoes') }}">Voltar</a>
+        {% if g.user['role'] == 'admin' %}
+        <a class="btn" href="{{ url_for('grade_lote', lote_codigo=lote_codigo) }}">Montar pedido</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="workflow-tabs">
+      <a class="workflow-tab {{ 'active' if modo == 'separacao' else '' }}" href="{{ url_for('separar_itens_lote', lote_codigo=lote_codigo) }}">Montar Separação</a>
+      {% if g.user['role'] in ['admin', 'conferente'] %}
+      <a class="workflow-tab {{ 'active' if modo == 'conferencia' else '' }}" href="{{ url_for('conferir_itens_lote', lote_codigo=lote_codigo) }}">Gestão e Conferência</a>
+      {% endif %}
+    </div>
+
+    <div class="operation-controls">
+      <div>
+        <label class="op-label">Escolha o pedido</label>
+        <select onchange="if(this.value){ window.location = this.value; }">
+          {% for lote in lotes %}
+            <option value="{{ url_for('separar_itens_lote' if modo == 'separacao' else 'conferir_itens_lote', lote_codigo=lote.operacao_chave) }}" {% if lote.operacao_chave == lote_codigo %}selected{% endif %}>
+              {{ lote.lote_nome }} • {{ lote.data_referencia }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="op-label">Escolha o item</label>
+        <select onchange="if(this.value){ window.location = this.value; }">
+          {% for produto in produtos %}
+            <option value="{{ url_for('separar_itens_lote' if modo == 'separacao' else 'conferir_itens_lote', lote_codigo=lote_codigo) }}?codigo={{ produto.codigo|urlencode }}" {% if produto.codigo == produto_atual.codigo %}selected{% endif %}>
+              {{ produto.codigo }} - {{ produto.descricao }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="operation-summary-grid">
+      <div class="summary-box">
+        <span>Item selecionado</span>
+        <strong>{{ produto_atual.codigo }}</strong>
+        <div class="mini">{{ produto_atual.descricao }} • {{ fmt_fator_embalagem(produto_atual.fator_embalagem) }}</div>
+      </div>
+      <div class="summary-box">
+        <span>Total pedido</span>
+        <strong>{{ fmt_num(produto_atual.total_pedido) }}</strong>
+        <div class="mini">{{ fmt_num(quantidade_em_embalagens(produto_atual.total_pedido, produto_atual.fator_embalagem)) }} cx no total</div>
+      </div>
+      <div class="summary-box">
+        <span>{{ 'Separado até agora' if modo == 'separacao' else 'Conferido até agora' }}</span>
+        <strong>{{ fmt_num(produto_atual.total_separado if modo == 'separacao' else produto_atual.total_conferido) }}</strong>
+        <div class="mini">{{ fmt_num(quantidade_em_embalagens(produto_atual.total_separado if modo == 'separacao' else produto_atual.total_conferido, produto_atual.fator_embalagem)) }} cx registradas</div>
+      </div>
+    </div>
+
+    <form method="post" id="lote-item-form" class="item-workflow-form">
+      {% if modo == 'separacao' %}
+      <div class="operation-highlight">
+        <div>
+          <label class="op-label">Quantidade real em estoque / recebida</label>
+          <input type="text" name="quantidade_real" id="quantidade_real" value="{{ fmt_num(produto_atual.total_separado or produto_atual.total_pedido) }}" placeholder="Digite a quantidade real">
+        </div>
+        <div class="check-row">
+          <label class="checkbox-line"><input type="checkbox" name="aplicar_racionalizacao" id="aplicar_racionalizacao" value="1" checked> Calcular separação racionalizada automaticamente</label>
+          <div class="mini">As lojas marcadas como fixas mantêm o valor sugerido/pedido, e o restante é redistribuído automaticamente.</div>
+        </div>
+      </div>
+      {% else %}
+      <div class="operation-highlight muted-block">
+        <div><strong>Começar conferência</strong></div>
+        <div class="mini">Ao abrir esta tela, o conferente recebe o item já separado por loja. Se estiver correto, apenas confirma. Se houver diferença, ajusta o valor antes de confirmar.</div>
+      </div>
+      {% endif %}
+
+      <div class="store-cards-grid" id="store_cards_grid">
+        {% for linha in produto_atual.linhas %}
+        <div class="store-op-card" data-store-id="{{ linha.store_id }}" data-pedido="{{ linha.quantidade_pedida }}">
+          <div class="store-op-head">
+            <strong>{{ linha.store_nome }}</strong>
+            <span class="{{ status_class(linha.status) }}">{{ linha.status }}</span>
+          </div>
+          <div class="store-op-metrics">
+            <div><span>Pedido</span><strong>{{ fmt_num(linha.quantidade_pedida) }}</strong><div class="mini">{{ fmt_num(quantidade_em_embalagens(linha.quantidade_pedida, linha.fator_embalagem)) }} cx</div></div>
+            {% if modo == 'separacao' %}
+            <div><span>Separado atual</span><strong>{{ fmt_num(linha.quantidade_separada) }}</strong><div class="mini">{{ fmt_num(quantidade_em_embalagens(linha.quantidade_separada, linha.fator_embalagem)) }} cx</div></div>
+            {% else %}
+            <div><span>Separado pelo separador</span><strong>{{ fmt_num(linha.quantidade_separada) }}</strong><div class="mini">{{ fmt_num(quantidade_em_embalagens(linha.quantidade_separada, linha.fator_embalagem)) }} cx</div></div>
+            {% endif %}
+          </div>
+
+          {% if modo == 'separacao' %}
+          <label class="checkbox-line"><input type="checkbox" class="store-fixed" name="fixo_{{ linha.store_id }}" value="1"> Manter valor sugerido / pedido</label>
+          <label class="op-label small-label">Quantidade final da loja</label>
+          <input class="store-qty-input" type="text" name="quantidade_loja_{{ linha.store_id }}" value="{{ fmt_num(linha.quantidade_separada) }}" placeholder="0">
+          {% else %}
+          <label class="op-label small-label">Quantidade conferida</label>
+          <input class="store-qty-input" type="text" name="confirmada_loja_{{ linha.store_id }}" value="{{ fmt_num(linha.quantidade_conferida or linha.quantidade_separada) }}" placeholder="0">
+          <div class="mini">Se estiver correto, mantenha o valor. Se estiver errado, ajuste antes de confirmar.</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="operation-footer-actions">
+        {% if modo == 'separacao' %}
+        <button class="btn" type="submit">Finalizar separação do item</button>
+        <div class="mini">Ao salvar, o sistema já abre o próximo item do pedido para facilitar a sequência do separador.</div>
+        {% else %}
+        <button class="btn" type="submit">Confirmar conferência do item</button>
+        <div class="mini">Depois de conferir todos os itens, finalize o lote logo abaixo.</div>
+        {% endif %}
+      </div>
+    </form>
+
+    {% if modo == 'conferencia' %}
+    <form method="post" action="{{ url_for('finalizar_conferencia_lote', lote_codigo=lote_codigo) }}" class="conference-final-form">
+      <button class="btn btn-success" type="submit">Finalizar conferência do lote</button>
+      <div class="mini">Esse botão fecha o lote após todas as lojas estarem conferidas.</div>
+    </form>
+    {% endif %}
+  </div>
+</div></section>
+
+{% if modo == 'separacao' %}
+<script>
+(function(){
+  const qtyRealInput = document.getElementById('quantidade_real');
+  const autoCheck = document.getElementById('aplicar_racionalizacao');
+  const cards = Array.from(document.querySelectorAll('.store-op-card'));
+  if (!qtyRealInput || !cards.length) return;
+
+  function parseNum(value) {
+    if (value === null || value === undefined) return 0;
+    const raw = String(value).trim();
+    if (!raw) return 0;
+    if (raw.includes(',') && raw.includes('.')) {
+      return parseFloat(raw.replace(/\./g, '').replace(',', '.')) || 0;
+    }
+    if (raw.includes(',')) {
+      return parseFloat(raw.replace(',', '.')) || 0;
+    }
+    return parseFloat(raw) || 0;
+  }
+
+  function formatNum(value) {
+    const rounded = Math.round(value * 1000) / 1000;
+    if (Math.abs(rounded - Math.round(rounded)) < 0.0001) return String(Math.round(rounded));
+    return String(rounded).replace('.', ',');
+  }
+
+  function distribute() {
+    if (!autoCheck.checked) return;
+    const totalReal = Math.max(parseNum(qtyRealInput.value), 0);
+    const fixed = [];
+    let totalFixed = 0;
+    cards.forEach(card => {
+      const pedido = parseNum(card.dataset.pedido);
+      const fixedInput = card.querySelector('.store-fixed');
+      const qtyInput = card.querySelector('.store-qty-input');
+      if (fixedInput && fixedInput.checked) {
+        const val = Math.min(pedido, totalReal);
+        fixed.push({card, pedido, val});
+        totalFixed += val;
+        qtyInput.value = formatNum(val);
+      }
+    });
+    const remaining = Math.max(totalReal - totalFixed, 0);
+    const flexible = cards.filter(card => !(card.querySelector('.store-fixed') || {}).checked)
+      .map(card => ({card, pedido: parseNum(card.dataset.pedido)}));
+    const pedidoTotal = flexible.reduce((sum, item) => sum + item.pedido, 0);
+    if (pedidoTotal <= 0) return;
+    let used = totalFixed;
+    flexible.forEach(item => {
+      const exact = remaining * (item.pedido / pedidoTotal);
+      item.floor = Math.floor(exact);
+      item.frac = exact - item.floor;
+      item.value = item.floor;
+      used += item.value;
+    });
+    let leftover = Math.round(totalReal - used);
+    flexible.sort((a, b) => b.frac - a.frac);
+    let i = 0;
+    while (leftover > 0 && flexible.length) {
+      const item = flexible[i % flexible.length];
+      if (item.value < item.pedido) {
+        item.value += 1;
+        leftover -= 1;
+      }
+      i += 1;
+      if (i > 10000) break;
+    }
+    flexible.forEach(item => {
+      item.card.querySelector('.store-qty-input').value = formatNum(Math.min(item.value, item.pedido));
+    });
+  }
+
+  qtyRealInput.addEventListener('input', distribute);
+  if (autoCheck) autoCheck.addEventListener('change', distribute);
+  cards.forEach(card => {
+    const fixedInput = card.querySelector('.store-fixed');
+    if (fixedInput) fixedInput.addEventListener('change', distribute);
+  });
+  distribute();
+})();
+</script>
+{% endif %}
+{% endblock %}

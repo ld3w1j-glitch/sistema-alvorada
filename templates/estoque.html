@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="main"><div class="wrap grid-2">
+  <div class="card">
+    <h1 class="section-title">Contagem e cadastro de estoque</h1>
+    <p class="muted">Nada é carregado de uma vez. Pesquise por código, nome ou código de barras para abrir só o item que você precisa.</p>
+    <form method="post">
+      <input type="hidden" name="redirect_q" value="{{ termo_busca or '' }}">
+      <input type="hidden" name="redirect_somente_com_saldo" value="{% if somente_com_saldo %}1{% else %}0{% endif %}">
+      <input type="text" id="estoque_codigo" name="codigo" placeholder="Código do produto ou código de barras" inputmode="numeric" autocomplete="off" required>
+      <input type="hidden" id="estoque_codigo_barras" name="codigo_barras">
+      <input type="text" id="estoque_descricao" name="descricao" placeholder="Descrição do produto" required>
+      <div class="mini" id="estoque_info_busca" style="margin-top:-4px; margin-bottom:10px;"></div>
+      <input type="text" id="estoque_fator" name="fator_embalagem" placeholder="Fator da embalagem (ex: 12 ou emb12)" value="1">
+      <div class="inline">
+        <input type="text" name="quantidade_atual" placeholder="Quantidade atual" required>
+        <input type="text" id="estoque_custo" name="custo_unitario" placeholder="Custo unitário">
+      </div>
+      <button type="submit">Salvar no estoque</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">Buscar item no estoque</h2>
+    <form method="get" class="stock-search-form stock-search-form-simple">
+      <input type="text" id="busca_estoque" name="q" placeholder="Pesquisar por código, nome ou código de barras" value="{{ termo_busca or '' }}" autocomplete="off" autofocus>
+      <label class="check-line stock-check-line"><input type="checkbox" name="somente_com_saldo" value="1" {% if somente_com_saldo %}checked{% endif %}> Somente com saldo</label>
+      <div class="stock-search-actions">
+        <button class="btn-secondary" type="submit">Buscar</button>
+        {% if termo_busca or somente_com_saldo %}
+        <a class="btn btn-secondary" href="{{ url_for('estoque') }}">Limpar</a>
+        {% endif %}
+      </div>
+    </form>
+
+    {% if not busca_realizada %}
+      <div class="empty stock-empty-state">Digite o código ou o nome do produto para carregar só o item procurado.</div>
+    {% else %}
+      <div class="stock-results-head">
+        <strong>{{ stock_items|length }} item(ns) encontrado(s)</strong>
+        <span class="mini">Busca: {{ termo_busca }}</span>
+      </div>
+
+      <div class="stock-result-list">
+        {% for item in stock_items %}
+        <article class="stock-item-card">
+          <div class="stock-item-head">
+            <div>
+              <div class="stock-item-code">Código {{ item.codigo }}</div>
+              <div class="mini">Código de barras: {{ item.codigo_barras or '-' }}</div>
+            </div>
+            <div class="stock-qty-badge">Saldo {{ fmt_num(item.quantidade_atual) }}</div>
+          </div>
+
+          <h3 class="stock-item-title">{{ item.descricao }}</h3>
+
+          <div class="stock-item-metrics">
+            <div class="stock-metric-box">
+              <span>Embalagem atual</span>
+              <strong>{{ fmt_fator_embalagem(item.fator_embalagem) }}</strong>
+            </div>
+            <div class="stock-metric-box">
+              <span>Caixas equivalentes</span>
+              <strong>{{ fmt_num(quantidade_em_embalagens(item.quantidade_atual, item.fator_embalagem)) }} cx</strong>
+            </div>
+            <div class="stock-metric-box">
+              <span>Custo atual</span>
+              <strong>R$ {{ fmt_num(item.custo_unitario) }}</strong>
+            </div>
+          </div>
+
+          <form class="stock-inline-form" method="post" action="{{ url_for('editar_item_estoque', stock_item_id=item.id) }}">
+            <input type="hidden" name="redirect_q" value="{{ termo_busca or '' }}">
+            <input type="hidden" name="redirect_somente_com_saldo" value="{% if somente_com_saldo %}1{% else %}0{% endif %}">
+            <div class="stock-inline-grid">
+              <div>
+                <label class="stock-label">Emb.</label>
+                <input type="text" name="fator_embalagem" value="{{ fmt_num(item.fator_embalagem) }}" required>
+              </div>
+              <div>
+                <label class="stock-label">Valor</label>
+                <input type="text" name="custo_unitario" value="{{ fmt_num(item.custo_unitario) }}">
+              </div>
+            </div>
+            <button class="btn-secondary" type="submit">Salvar emb. e valor</button>
+          </form>
+
+          <div class="stock-item-actions">
+            <form class="compact-form" method="post" action="{{ url_for('ajustar_estoque', stock_item_id=item.id) }}">
+              <input type="hidden" name="redirect_q" value="{{ termo_busca or '' }}">
+              <input type="hidden" name="redirect_somente_com_saldo" value="{% if somente_com_saldo %}1{% else %}0{% endif %}">
+              <input type="text" name="nova_quantidade" placeholder="Nova quantidade" required>
+              <button class="btn-secondary" type="submit">Ajustar qtd.</button>
+            </form>
+            <form method="post" action="{{ url_for('remover_item_estoque', stock_item_id=item.id) }}">
+              <input type="hidden" name="redirect_q" value="{{ termo_busca or '' }}">
+              <input type="hidden" name="redirect_somente_com_saldo" value="{% if somente_com_saldo %}1{% else %}0{% endif %}">
+              <button class="btn-danger" type="submit">Remover</button>
+            </form>
+          </div>
+        </article>
+        {% else %}
+        <div class="empty stock-empty-state">Nenhum item encontrado para essa busca.</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+</div></section>
+
+<script>
+(function(){
+  const codigoInput = document.getElementById('estoque_codigo');
+  const codigoBarrasInput = document.getElementById('estoque_codigo_barras');
+  const descricaoInput = document.getElementById('estoque_descricao');
+  const fatorInput = document.getElementById('estoque_fator');
+  const custoInput = document.getElementById('estoque_custo');
+  const infoBusca = document.getElementById('estoque_info_busca');
+  const buscaInput = document.getElementById('busca_estoque');
+  if (buscaInput) buscaInput.select();
+  if (!codigoInput || !descricaoInput || !fatorInput || !custoInput) return;
+  let timer = null;
+
+  async function buscarProduto() {
+    const codigo = codigoInput.value.trim();
+    if (!codigo) {
+      if (codigoBarrasInput) codigoBarrasInput.value = '';
+      if (infoBusca) infoBusca.textContent = '';
+      return;
+    }
+    try {
+      const resp = await fetch(`{{ url_for('api_produto') }}?codigo=${encodeURIComponent(codigo)}`);
+      const data = await resp.json();
+      if (!data.ok) {
+        if (codigoBarrasInput) codigoBarrasInput.value = '';
+        if (infoBusca) infoBusca.textContent = 'Produto novo. Preencha os dados para cadastrar.';
+        return;
+      }
+      if (data.codigo) codigoInput.value = data.codigo;
+      if (codigoBarrasInput) codigoBarrasInput.value = data.codigo_barras || '';
+      if (data.descricao) descricaoInput.value = data.descricao;
+      if (data.fator_embalagem !== undefined && data.fator_embalagem !== null) fatorInput.value = data.fator_embalagem;
+      if (data.custo_unitario !== undefined && data.custo_unitario !== null) custoInput.value = data.custo_unitario;
+      if (infoBusca) {
+        const saldo = data.quantidade_atual ?? 0;
+        const barras = data.codigo_barras ? ` | Barras: ${data.codigo_barras}` : '';
+        infoBusca.textContent = `Item localizado no estoque | Saldo: ${saldo}${barras}`;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  codigoInput.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(buscarProduto, 180);
+  });
+  codigoInput.addEventListener('blur', buscarProduto);
+})();
+</script>
+{% endblock %}

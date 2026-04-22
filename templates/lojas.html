@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="main"><div class="wrap grid-2">
+  <div class="card">
+    <h1 class="section-title">Lojas</h1>
+    <form method="post">
+      <input type="text" name="nome" placeholder="Nome da loja" required>
+      <button type="submit">Salvar loja</button>
+    </form>
+  </div>
+  <div class="card">
+    <h2 class="section-title">Lojas cadastradas</h2>
+    <div class="table-responsive"><table>
+      <thead><tr><th>Nome</th><th>Status</th><th>Ação</th></tr></thead>
+      <tbody>
+      {% for store in stores %}
+      <tr>
+        <td>{{ store.nome }}</td>
+        <td>{{ 'Ativa' if store.ativo else 'Inativa' }}</td>
+        <td class="actions-cell">
+          <form method="post" action="{{ url_for('alternar_loja', store_id=store.id) }}">
+            <button class="btn-secondary" type="submit">{{ 'Desativar' if store.ativo else 'Ativar' }}</button>
+          </form>
+          <form method="post" action="{{ url_for('excluir_loja', store_id=store.id) }}" onsubmit="return confirm('Excluir esta loja?');">
+            <button class="btn-danger" type="submit">Excluir</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3" class="empty">Nenhuma loja.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+</div></section>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="main"><div class="wrap">
+  {% if lotes %}
+  <div class="card">
+    <div class="toolbar">
+      <h2 class="section-title">Operações por lote</h2>
+      {% if g.user['role'] == 'admin' %}<a class="btn" href="{{ url_for('nova_separacao') }}">Novo lote</a>{% endif %}
+    </div>
+    <div class="table-responsive"><table>
+      <thead><tr><th>Lote</th><th>Data</th><th>Lojas</th><th>Responsável</th><th>Conferente</th><th>Ações</th></tr></thead>
+      <tbody>
+        {% for lote in lotes %}
+        <tr>
+          <td>{{ lote.lote_nome }}</td>
+          <td>{{ lote.data_referencia }}</td>
+          <td>{{ lote.lojas }}<div class="mini">{{ lote.total_lojas }} loja(s)</div></td>
+          <td>{{ lote.responsavel_nome or '-' }}</td>
+          <td>{{ lote.conferente_nome or '-' }}</td>
+          <td class="actions-cell">
+            {% if g.user['role'] == 'admin' %}<a class="btn" href="{{ url_for('grade_lote', lote_codigo=lote.operacao_chave) }}">Montar pedido</a>{% endif %}
+            {% if g.user['role'] in ['admin', 'separador'] %}<a class="btn btn-secondary" href="{{ url_for('separar_itens_lote', lote_codigo=lote.operacao_chave) }}">Separar itens</a>{% endif %}
+            {% if usar_conferente and g.user['role'] in ['admin', 'conferente'] %}<a class="btn btn-secondary" href="{{ url_for('conferir_itens_lote', lote_codigo=lote.operacao_chave) }}">Começar conferência</a>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <h1 class="section-title">Separações por loja</h1>
+    <div class="table-responsive"><table>
+      <thead><tr><th>Lote</th><th>Data</th><th>Loja</th><th>Responsável</th><th>Conferente</th><th>Status</th><th>Estoque</th><th>Ações</th></tr></thead>
+      <tbody>
+      {% for s in separacoes %}
+      <tr>
+        <td>{{ s.lote_nome }}</td>
+        <td>{{ s.data_referencia }}</td>
+        <td>{{ s.store_nome }}</td>
+        <td>{{ s.responsavel_nome or '-' }}</td>
+        <td>{{ s.conferente_nome or '-' }}</td>
+        <td><span class="{{ status_class(s.status) }}">{{ s.status }}</span></td>
+        <td>{{ 'Ligado' if s.usar_estoque else 'Desligado' }}</td>
+        <td class="actions-cell">
+          {% if g.user['role'] == 'admin' %}<a class="btn" href="{{ url_for('grade_lote', lote_codigo=lote_operacao_chave_row(s)) }}">Montar pedido</a>{% endif %}
+          <a class="btn btn-secondary" href="{{ url_for('detalhe_separacao', separation_id=s.id) }}">Abrir loja</a>
+          {% if g.user['role'] == 'admin' %}
+          <form method="post" action="{{ url_for('excluir_separacao', separation_id=s.id) }}"><button class="btn-danger" type="submit">Remover loja</button></form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" class="empty">Nenhuma separação encontrada.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+</div></section>
+{% endblock %}

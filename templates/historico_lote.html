@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="main"><div class="wrap">
+  <div class="card">
+    <div class="toolbar">
+      <div>
+        <h1 class="section-title">Histórico do lote</h1>
+        <div class="muted">{{ historico[0].lote_nome }} • {{ historico[0].data_referencia }}</div>
+      </div>
+      <a class="btn btn-secondary" href="{{ url_for('relatorios') }}">Voltar</a>
+    </div>
+    <div class="table-responsive"><table>
+      <thead><tr><th>Loja</th><th>Responsável</th><th>Conferente</th><th>Status</th><th>Finalizado</th><th>Itens</th><th>Ação</th></tr></thead>
+      <tbody>
+      {% for s in historico %}
+      <tr>
+        <td>{{ s.store_nome }}</td>
+        <td>{{ s.responsavel_nome or '-' }}</td>
+        <td>{{ s.conferente_nome or '-' }}</td>
+        <td><span class="{{ status_class(s.status) }}">{{ s.status }}</span></td>
+        <td>{{ s.finalizado_em or '-' }}</td>
+        <td>
+          {% for item in itens_por_separacao[s.id] %}
+            <div class="mini">{{ item.codigo }} - {{ item.descricao }} - {{ fmt_fator_embalagem(item.fator_embalagem) }} - {{ fmt_num(quantidade_em_embalagens(item.quantidade_separada, item.fator_embalagem)) }} = {{ fmt_num(item.quantidade_separada) }}</div>
+          {% else %}
+            <div class="mini">Sem itens.</div>
+          {% endfor %}
+        </td>
+        <td>
+          {% if g.user['role'] == 'admin' and s.status == 'FINALIZADA' %}
+          <form method="post" action="{{ url_for('apagar_historico_separacao', separation_id=s.id) }}" onsubmit="return confirm('Cancelar só esta loja do histórico e estornar o estoque?');">
+            <button class="btn-danger" type="submit">Cancelar loja</button>
+          </form>
+          {% elif g.user['role'] == 'admin' and s.status == 'CANCELADA' %}
+          <form method="post" action="{{ url_for('apagar_historico_separacao', separation_id=s.id) }}" onsubmit="return confirm('Excluir em definitivo esta loja cancelada?');">
+            <button class="btn-danger" type="submit">Excluir cancelada</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+</div></section>
+{% endblock %}

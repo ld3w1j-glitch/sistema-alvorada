@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="main"><div class="wrap">
+  <div class="card">
+    <h1 class="section-title">Configurações</h1>
+    <form method="post">
+      <label class="check-line"><input type="checkbox" name="vincular_estoque" value="1" {% if vincular_estoque %}checked{% endif %}> Vincular estoque às separações</label>
+      <label class="check-line"><input type="checkbox" name="usar_conferente" value="1" {% if usar_conferente %}checked{% endif %}> Exigir conferente</label>
+      <button type="submit">Salvar configurações</button>
+    </form>
+  </div>
+</div></section>
+{% endblock %}

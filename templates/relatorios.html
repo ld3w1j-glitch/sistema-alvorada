@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="main"><div class="wrap grid-2">
+  <div class="card">
+    <h1 class="section-title">Resumo</h1>
+    <div class="stats">
+      <div class="stat"><span>Finalizadas</span><strong>{{ resumo.finalizadas or 0 }}</strong></div>
+      <div class="stat"><span>Itens</span><strong>{{ fmt_num(resumo.itens or 0) }}</strong></div>
+      <div class="stat"><span>Custo</span><strong>{{ fmt_money(resumo.custo or 0) }}</strong></div>
+      <div class="stat"><span>Lotes</span><strong>{{ historico_lotes|length }}</strong></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2 class="section-title">Histórico por lote</h2>
+    <div class="table-responsive"><table>
+      <thead><tr><th>Lote</th><th>Data</th><th>Status</th><th>Lojas</th><th>Qtd.</th><th>Custo</th><th>Ação</th></tr></thead>
+      <tbody>
+      {% for h in historico_lotes %}
+      <tr>
+        <td>{{ h.lote_nome }}</td>
+        <td>{{ h.data_referencia }}</td>
+        <td><span class="{{ status_class('CANCELADA' if h.status_lote == 'CANCELADO' else 'FINALIZADA' if h.status_lote == 'FINALIZADO' else 'PARCIAL') }}">{{ h.status_lote }}</span><div class="mini">{{ h.lojas_finalizadas }} finalizada(s) • {{ h.lojas_canceladas }} cancelada(s)</div></td>
+        <td>{{ h.total_lojas }} loja(s)<div class="mini">{{ h.lojas }}</div></td>
+        <td>{{ fmt_num(h.qtd_total) }}</td>
+        <td>{{ fmt_money(h.custo_total) }}</td>
+        <td class="actions-cell">
+          <a class="btn btn-secondary" href="{{ url_for('detalhe_historico_lote', lote_codigo=h.operacao_chave) }}">Abrir lote</a>
+          {% if g.user['role'] == 'admin' %}
+          <form method="post" action="{{ url_for('apagar_historico_lote', lote_codigo=h.operacao_chave) }}" onsubmit="return confirm('Processar este lote histórico? As lojas finalizadas serão canceladas com estorno e as já canceladas serão excluídas em definitivo.');">
+            <button class="btn-danger" type="submit">Processar lote</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="empty">Sem histórico encontrado.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+</div></section>
+{% endblock %}

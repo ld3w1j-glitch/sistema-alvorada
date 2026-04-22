@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="main"><div class="wrap">
+  <div class="card">
+    <div class="toolbar">
+      <div>
+        <h1 class="section-title">Operação por lote</h1>
+        <div class="muted">{{ lote_nome }} • {{ data_referencia }} • Responsável: {{ responsavel_nome or '-' }} • Conferente: {{ conferente_nome or '-' }}</div>
+      </div>
+      <div class="inline">
+        <a class="btn btn-secondary" href="{{ url_for('listar_lotes') }}">Voltar</a>
+      </div>
+    </div>
+    <div class="op-shell">
+      <div class="op-grid">
+        <div class="op-box">
+          <div class="op-title">Lançar produto no lote</div>
+          <div class="op-subtitle">Um produto por vez, com quantidades diferentes por loja, sem entrar uma por uma.</div>
+          <div class="units-grid">
+            {% for sep in separacoes %}
+              <label class="unit-pill"><input type="checkbox" checked disabled> {{ sep.store_nome }}</label>
+            {% endfor %}
+          </div>
+          <form method="post">
+            <div class="op-form-grid">
+              <div>
+                <label class="op-label">CÓDIGO</label>
+                <input class="op-input" type="text" id="codigo_produto" name="codigo" placeholder="Digite o código" inputmode="numeric" autocomplete="off" required>
+              </div>
+              <div>
+                <label class="op-label">DESCRIÇÃO</label>
+                <input class="op-input" type="text" id="descricao_produto" name="descricao" placeholder="Descrição do produto" required>
+              </div>
+              <div>
+                <label class="op-label">FATOR DA EMBALAGEM</label>
+                <input class="op-input" type="text" id="fator_embalagem" name="fator_embalagem" value="1" placeholder="Ex: 12 ou emb12">
+              </div>
+            </div>
+            <div class="qty-grid">
+              {% for sep in separacoes %}
+              <div class="qty-card">
+                <strong>{{ sep.store_nome }}</strong>
+                <div class="mini">Status: {{ sep.status }}</div>
+                <input class="qty-input" type="text" name="qty_{{ sep.id }}" placeholder="0" {% if sep.status == 'FINALIZADA' %}disabled{% endif %}>
+              </div>
+              {% endfor %}
+            </div>
+            <button class="op-button" type="submit">ADICIONAR ITEM À FILA</button>
+          </form>
+        </div>
+        <div class="op-box queue-box">
+          <div class="op-title">Fila do lote</div>
+          <div class="queue-scroll">
+            <table class="queue-table">
+              <thead><tr><th>Cód</th><th>Produto</th><th>Emb.</th><th>Total</th></tr></thead>
+              <tbody>
+              {% for produto in produtos %}
+              <tr>
+                <td>{{ produto.codigo }}</td>
+                <td>
+                  <strong>{{ produto.descricao }}</strong>
+                  <div class="mini">
+                    {% for linha in produto.linhas %}
+                      {{ linha.store_nome }}: {{ fmt_num(quantidade_em_embalagens(linha.quantidade, produto.fator_embalagem)) }} cx = {{ fmt_num(linha.quantidade) }}{% if not loop.last %} • {% endif %}
+                    {% endfor %}
+                  </div>
+                </td>
+                <td>{{ fmt_fator_embalagem(produto.fator_embalagem) }}</td>
+                <td>{{ fmt_num(produto.total) }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="4">Nenhum produto lançado ainda.</td></tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="op-actions">
+            {% for sep in separacoes %}
+              <a class="btn btn-secondary" href="{{ url_for('detalhe_separacao', separation_id=sep.id) }}">{{ sep.store_nome }}</a>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<script>
+(function(){
+  const codigoInput = document.getElementById('codigo_produto');
+  const descricaoInput = document.getElementById('descricao_produto');
+  const fatorInput = document.getElementById('fator_embalagem');
+  if (!codigoInput || !descricaoInput || !fatorInput) return;
+  let timer = null;
+  async function buscarProduto() {
+    const codigo = codigoInput.value.trim();
+    if (!codigo) return;
+    try {
+      const resp = await fetch(`{{ url_for('api_produto') }}?codigo=${encodeURIComponent(codigo)}`);
+      const data = await resp.json();
+      if (!data.ok) return;
+      if (data.codigo) codigoInput.value = data.codigo;
+      if (!descricaoInput.value.trim()) descricaoInput.value = data.descricao || '';
+      if (!fatorInput.value.trim() || fatorInput.value.trim() === '1') fatorInput.value = data.fator_embalagem || 1;
+    } catch (err) {
+      console.error(err);
+    }
+  }
+  codigoInput.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(buscarProduto, 250); });
+  codigoInput.addEventListener('blur', buscarProduto);
+})();
+</script>
+{% endblock %}

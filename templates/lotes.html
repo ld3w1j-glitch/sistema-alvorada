@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="main"><div class="wrap">
+  <div class="card">
+    <div class="toolbar">
+      <h1 class="section-title">Lotes</h1>
+      <a class="btn" href="{{ url_for('nova_separacao') }}">Novo lote</a>
+    </div>
+    <div class="table-responsive"><table>
+      <thead><tr><th>Lote</th><th>Data</th><th>Lojas</th><th>Responsável</th><th>Conferente</th><th>Ações</th></tr></thead>
+      <tbody>
+      {% for lote in lotes %}
+      <tr>
+        <td>{{ lote.lote_nome }}</td>
+        <td>{{ lote.data_referencia }}</td>
+        <td>{{ lote.lojas }}<div class="mini">{{ lote.total_lojas }} loja(s) • {{ lote.lojas_finalizadas }} finalizada(s)</div></td>
+        <td>{{ lote.responsavel_nome or '-' }}</td>
+        <td>{{ lote.conferente_nome or '-' }}</td>
+        <td class="actions-cell">
+          <a class="btn" href="{{ url_for('grade_lote', lote_codigo=lote.operacao_chave) }}">Operar lote</a>
+          <form method="post" action="{{ url_for('excluir_lote', lote_codigo=lote.operacao_chave) }}">
+            <button class="btn-danger" type="submit">Excluir lote</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="empty">Nenhum lote em aberto.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+</div></section>
+{% endblock %}

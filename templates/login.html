@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="login-shell">
+  <div class="card login-card">
+    <div class="login-brand">
+      <div class="brand-mark" aria-hidden="true"><img src="/static/img/logo_alvorada.png" alt="Alvorada"></div>
+      <div>
+        <h1 class="section-title" style="margin-bottom:6px;">SISTEMA PADARIA</h1>
+        <p class="muted" style="margin:0;">Use seu login para acessar o sistema.</p>
+      </div>
+    </div>
+    <form method="post">
+      <input type="text" name="username" placeholder="Usuário" required>
+      <input type="password" name="password" placeholder="Senha" required>
+      <button type="submit">Entrar</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

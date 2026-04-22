@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="main"><div class="wrap grid-2">
+  <div class="card">
+    <h1 class="section-title">Usuários</h1>
+    <form method="post">
+      <input type="text" name="nome" placeholder="Nome" required>
+      <input type="text" name="username" placeholder="Login" required>
+      <input type="password" name="password" placeholder="Senha" required>
+      <select name="role" required>
+        <option value="admin">Admin</option>
+        <option value="separador">Separador</option>
+        <option value="conferente">Conferente</option>
+        <option value="balanco">Balanço</option>
+      </select>
+      <button type="submit">Salvar usuário</button>
+    </form>
+  </div>
+  <div class="card">
+    <h2 class="section-title">Cadastrados</h2>
+    <div class="table-responsive"><table>
+      <thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Status</th><th>Ação</th></tr></thead>
+      <tbody>
+      {% for user in users %}
+      <tr>
+        <td>{{ user.nome }}</td>
+        <td>{{ user.username }}</td>
+        <td><span class="{{ role_badge(user.role) }}">{{ user.role }}</span></td>
+        <td>{{ 'Ativo' if user.ativo else 'Inativo' }}</td>
+        <td class="actions-cell">
+          <form method="post" action="{{ url_for('alternar_usuario', user_id=user.id) }}">
+            <button class="btn-secondary" type="submit">{{ 'Desativar' if user.ativo else 'Ativar' }}</button>
+          </form>
+          <form method="post" action="{{ url_for('excluir_usuario', user_id=user.id) }}" onsubmit="return confirm('Excluir este usuário?');">
+            <button class="btn-danger" type="submit">Excluir</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="empty">Nenhum usuário.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+</div></section>
+{% endblock %}

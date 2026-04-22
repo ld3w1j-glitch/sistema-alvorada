@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="main"><div class="wrap grid-2">
+  <div class="card">
+    <h1 class="section-title">{{ separation.lote_nome }} • {{ separation.store_nome }}</h1>
+    <p class="muted">{{ texto_fluxo }}</p>
+    <p class="muted">Status: <span class="{{ status_class(separation.status) }}">{{ separation.status }}</span></p>
+    <p class="muted">Qtd. pedida total: <strong>{{ fmt_num(resumo.qtd_pedida) }}</strong> • Qtd. separada: <strong>{{ fmt_num(resumo.qtd_separada) }}</strong></p>
+    {% if pode_editar_itens %}
+    <hr>
+    <h2 class="section-title">Adicionar item</h2>
+    <form method="post" action="{{ url_for('adicionar_item_separacao', separation_id=separation.id) }}">
+      <input type="text" id="pedido_codigo" name="codigo" placeholder="Código" inputmode="numeric" autocomplete="off" required>
+      <input type="text" id="pedido_descricao" name="descricao" placeholder="Descrição" required>
+      <input type="text" id="pedido_fator" name="fator_embalagem" placeholder="Fator da embalagem (ex: 12)" value="1">
+      <input type="text" name="quantidade_pedida" placeholder="Quantidade pedida" required>
+      <div class="mini" id="pedido_info_estoque" style="margin:4px 0 8px 0;"></div>
+      <button type="submit">Adicionar item</button>
+    </form>
+    {% endif %}
+    <div class="actions-cell" style="margin-top:16px;">
+      {% if pode_enviar_conferencia %}
+      <form method="post" action="{{ url_for('enviar_conferencia', separation_id=separation.id) }}"><button type="submit">Enviar para conferência</button></form>
+      {% endif %}
+      {% if pode_finalizar %}
+      <form method="post" action="{{ url_for('finalizar_separacao', separation_id=separation.id) }}"><button class="btn-warning" type="submit">{{ texto_botao_finalizar }}</button></form>
+      {% endif %}
+    </div>
+  </div>
+  <div class="card">
+    <h2 class="section-title">Itens</h2>
+    <div class="table-responsive"><table>
+      <thead><tr><th>Cód.</th><th>Descrição</th><th>Emb.</th><th>Pedida</th><th>Separada</th><th>Status</th><th>Ações</th></tr></thead>
+      <tbody>
+      {% for item in items %}
+      <tr>
+        <td>{{ item.codigo }}</td>
+        <td>{{ item.descricao }}<div class="mini">Estoque atual: {{ fmt_num(item.estoque_atual) }}</div></td>
+        <td>{{ fmt_fator_embalagem(item.fator_embalagem) }}</td>
+        <td>{{ fmt_num(item.quantidade_pedida) }}<div class="mini">{{ fmt_num(quantidade_em_embalagens(item.quantidade_pedida, item.fator_embalagem)) }} cx</div></td>
+        <td>{{ fmt_num(item.quantidade_separada) }}<div class="mini">{{ fmt_num(quantidade_em_embalagens(item.quantidade_separada, item.fator_embalagem)) }} cx</div></td>
+        <td><span class="{{ status_class(item.status) }}">{{ item.status }}</span></td>
+        <td class="actions-cell">
+          {% if pode_separar %}
+          <form class="compact-form" method="post" action="{{ url_for('atualizar_item_separacao', item_id=item.id) }}">
+            <input type="hidden" name="separation_id" value="{{ separation.id }}">
+            <input type="text" name="quantidade_separada" placeholder="Qtd. separada" required>
+            <button class="btn-secondary" type="submit">Atualizar</button>
+          </form>
+          {% endif %}
+          {% if pode_editar_itens %}
+          <form method="post" action="{{ url_for('excluir_item_separacao', item_id=item.id) }}">
+            <input type="hidden" name="separation_id" value="{{ separation.id }}">
+            <button class="btn-danger" type="submit">Excluir</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="empty">Nenhum item lançado.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+</div></section>
+
+{% if pode_editar_itens %}
+<script>
+(function(){
+  const codigoInput = document.getElementById('pedido_codigo');
+  const descricaoInput = document.getElementById('pedido_descricao');
+  const fatorInput = document.getElementById('pedido_fator');
+  const infoEstoque = document.getElementById('pedido_info_estoque');
+  if (!codigoInput || !descricaoInput || !fatorInput) return;
+  let timer = null;
+  async function buscarProduto() {
+    const codigo = codigoInput.value.trim();
+    if (!codigo) {
+      if (infoEstoque) infoEstoque.textContent = '';
+      return;
+    }
+    try {
+      const resp = await fetch(`{{ url_for('api_produto') }}?codigo=${encodeURIComponent(codigo)}`);
+      const data = await resp.json();
+      if (!data.ok) {
+        if (infoEstoque) infoEstoque.textContent = 'Código não encontrado no estoque.';
+        return;
+      }
+      if (data.codigo) codigoInput.value = data.codigo;
+      if (data.descricao) descricaoInput.value = data.descricao;
+      if (data.fator_embalagem !== undefined && data.fator_embalagem !== null) fatorInput.value = data.fator_embalagem;
+      if (infoEstoque) {
+        const emb = (data.fator_embalagem !== undefined && data.fator_embalagem !== null) ? `Emb${data.fator_embalagem}` : 'Emb1';
+        const qtd = (data.quantidade_atual !== undefined && data.quantidade_atual !== null) ? data.quantidade_atual : 0;
+        const custo = (data.custo_unitario !== undefined && data.custo_unitario !== null) ? data.custo_unitario : 0;
+        infoEstoque.textContent = `Estoque atual: ${qtd} • ${emb} • Custo: ${custo}`;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+  codigoInput.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(buscarProduto, 250); });
+  codigoInput.addEventListener('blur', buscarProduto);
+})();
+</script>
+{% endif %}
+{% endblock %}
