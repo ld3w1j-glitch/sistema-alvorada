@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="main">
+  <div class="wrap" style="max-width:720px;">
+    <div class="card">
+      <h1 class="section-title">Minha conta</h1>
+      <p class="muted">Aqui o usuário pode trocar a própria senha quando quiser.</p>
+
+      <div style="display:grid; gap:8px; margin-bottom:16px;">
+        <div><strong>Nome:</strong> {{ g.user.nome }}</div>
+        <div><strong>Login:</strong> {{ g.user.username }}</div>
+        <div><strong>Função:</strong> {{ role_label(g.user.role) }}</div>
+        <div><strong>Permissão:</strong> {{ permission_level_label(g.user.permission_level if 'permission_level' in g.user.keys() else '', g.user.role) }}</div>
+        <div><strong>Acessos:</strong> {{ access_labels_for_user(g.user)|join(', ') }}</div>
+      </div>
+
+      <form method="post">
+        <input type="password" name="senha_atual" placeholder="Senha atual" required>
+        <input type="password" name="nova_senha" placeholder="Nova senha" required>
+        <input type="password" name="confirmar_senha" placeholder="Confirmar nova senha" required>
+        <button type="submit">Trocar senha</button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

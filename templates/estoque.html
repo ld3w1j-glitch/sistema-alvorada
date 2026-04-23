@@ -2,6 +2,7 @@
 {% block content %}
 <section class="main"><div class="wrap grid-2">
   <div class="card">
+    {% if can_edit_stock_registration(g.user) %}
     <h1 class="section-title">Contagem e cadastro de estoque</h1>
     <p class="muted">Nada é carregado de uma vez. Pesquise por código, nome ou código de barras para abrir só o item que você precisa.</p>
     <form method="post">
@@ -18,6 +19,13 @@
       </div>
       <button type="submit">Salvar no estoque</button>
     </form>
+    {% else %}
+    <h1 class="section-title">Ajuste de estoque</h1>
+    <p class="muted">Seu acesso permite pesquisar os itens e ajustar apenas a quantidade. Cadastro de novos itens, alteração de embalagem, valor e remoção ficam restritos ao usuário com permissão de admin.</p>
+    <div class="stock-empty-state">
+      Use a busca ao lado para localizar o item e lançar a nova quantidade contada no estoque.
+    </div>
+    {% endif %}
   </div>
 
   <div class="card">
@@ -69,6 +77,7 @@
             </div>
           </div>
 
+          {% if can_edit_stock_registration(g.user) %}
           <form class="stock-inline-form" method="post" action="{{ url_for('editar_item_estoque', stock_item_id=item.id) }}">
             <input type="hidden" name="redirect_q" value="{{ termo_busca or '' }}">
             <input type="hidden" name="redirect_somente_com_saldo" value="{% if somente_com_saldo %}1{% else %}0{% endif %}">
@@ -84,6 +93,7 @@
             </div>
             <button class="btn-secondary" type="submit">Salvar emb. e valor</button>
           </form>
+          {% endif %}
 
           <div class="stock-item-actions">
             <form class="compact-form" method="post" action="{{ url_for('ajustar_estoque', stock_item_id=item.id) }}">
@@ -92,7 +102,7 @@
               <input type="text" name="nova_quantidade" placeholder="Nova quantidade" required>
               <button class="btn-secondary" type="submit">Ajustar qtd.</button>
             </form>
-            {% if g.user['role'] == 'admin' %}
+            {% if user_is_admin(g.user) %}
             <form method="post" action="{{ url_for('remover_item_estoque', stock_item_id=item.id) }}">
               <input type="hidden" name="redirect_q" value="{{ termo_busca or '' }}">
               <input type="hidden" name="redirect_somente_com_saldo" value="{% if somente_com_saldo %}1{% else %}0{% endif %}">
@@ -107,7 +117,85 @@
       </div>
     {% endif %}
   </div>
-</div></section>
+</div>
+
+<div class="wrap" style="margin-top: 16px;">
+  <div class="card">
+    <div class="stock-results-head">
+      <div>
+        <h2 class="section-title" style="margin-bottom: 6px;">Histórico de movimentações do estoque</h2>
+        <div class="mini">Filtre por usuário, tipo e período para localizar rapidamente cada movimentação.</div>
+      </div>
+      <span class="mini">{{ stock_movements|length }} movimentação(ões){% if termo_busca %} relacionadas à busca atual{% endif %}</span>
+    </div>
+
+    <form method="get" class="stock-history-filters">
+      <input type="hidden" name="q" value="{{ termo_busca or '' }}">
+      <input type="hidden" name="somente_com_saldo" value="{% if somente_com_saldo %}1{% else %}0{% endif %}">
+      <div>
+        <label class="stock-label">Usuário</label>
+        <select name="hist_usuario">
+          <option value="">Todos</option>
+          {% for usuario in history_user_options %}
+          <option value="{{ usuario.id }}" {% if hist_usuario == (usuario.id|string) %}selected{% endif %}>{{ usuario.nome }}{% if usuario.username %} ({{ usuario.username }}){% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="stock-label">Tipo</label>
+        <select name="hist_tipo">
+          <option value="">Todos</option>
+          {% for tipo_key, tipo_label in stock_movement_type_options %}
+          <option value="{{ tipo_key }}" {% if hist_tipo == tipo_key %}selected{% endif %}>{{ tipo_label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="stock-label">Data inicial</label>
+        <input type="date" name="hist_data_inicial" value="{{ hist_data_inicial or '' }}">
+      </div>
+      <div>
+        <label class="stock-label">Data final</label>
+        <input type="date" name="hist_data_final" value="{{ hist_data_final or '' }}">
+      </div>
+      <div class="stock-search-actions stock-history-filter-actions">
+        <button class="btn-secondary" type="submit">Filtrar histórico</button>
+        <a class="btn btn-secondary" href="{{ url_for('estoque', q=termo_busca or '', somente_com_saldo=('1' if somente_com_saldo else '0')) }}">Limpar filtros</a>
+      </div>
+    </form>
+
+    <div class="stock-export-actions">
+      <a class="btn btn-secondary" href="{{ url_for('exportar_historico_estoque_excel', q=termo_busca or '', hist_usuario=hist_usuario or '', hist_tipo=hist_tipo or '', hist_data_inicial=hist_data_inicial or '', hist_data_final=hist_data_final or '') }}">Exportar Excel</a>
+      <a class="btn btn-secondary" href="{{ url_for('exportar_historico_estoque_pdf', q=termo_busca or '', hist_usuario=hist_usuario or '', hist_tipo=hist_tipo or '', hist_data_inicial=hist_data_inicial or '', hist_data_final=hist_data_final or '') }}">Exportar PDF</a>
+    </div>
+
+    {% if stock_movements %}
+    <div class="stock-history-list">
+      {% for mov in stock_movements %}
+      <article class="stock-history-item">
+        <div class="stock-history-main">
+          <div class="stock-history-top">
+            <strong>{{ stock_movement_label(mov.tipo) }}</strong>
+            <span class="stock-history-badge {% if mov.quantidade > 0 %}is-positive{% elif mov.quantidade < 0 %}is-negative{% else %}is-neutral{% endif %}">
+              {% if mov.quantidade > 0 %}+{% endif %}{{ fmt_num(mov.quantidade) }}
+            </span>
+          </div>
+          <div class="stock-history-desc">{{ mov.descricao }} <span class="mini">• Código {{ mov.codigo }}</span></div>
+          <div class="stock-history-meta">
+            <span><strong>Usuário:</strong> {{ mov.usuario_nome or mov.usuario_login or 'Sistema' }}</span>
+            <span><strong>Quando:</strong> {{ mov.criado_em }}</span>
+            {% if mov.observacao %}<span><strong>Obs.:</strong> {{ mov.observacao }}</span>{% endif %}
+          </div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty stock-empty-state">Nenhuma movimentação encontrada com os filtros informados.</div>
+    {% endif %}
+  </div>
+</div>
+</section>
 
 <script>
 (function(){

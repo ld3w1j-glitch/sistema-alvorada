@@ -5,27 +5,24 @@
         <div class="brand-mark" aria-hidden="true"><img src="/static/img/logo_alvorada.png" alt="Alvorada"></div>
         <div>
           <strong>PADARIA SISTEMA</strong>
-          <span>{{ g.user['nome'] }} • {{ g.user['role']|upper }}</span>
+          <span>
+            {{ g.user['nome'] }} • {{ role_label(g.user['role']) }} • {{ permission_level_label(g.user['permission_level'] if 'permission_level' in g.user.keys() else '', g.user['role']) }}
+          </span>
         </div>
       </div>
       <button type="button" class="menu-toggle" id="menu-toggle" aria-expanded="false" aria-controls="main-nav">Menu</button>
     </div>
     <nav class="nav" id="main-nav">
-      <a href="{{ url_for('dashboard') }}">Painel</a>
-      <a href="{{ url_for('listar_separacoes') }}">Separações</a>
-      {% if g.user['role'] in ['admin', 'balanco'] %}
-      <a href="{{ url_for('estoque') }}">Estoque</a>
-      {% endif %}
-      {% if g.user['role'] == 'admin' %}
-        <a href="{{ url_for('usuarios') }}">Usuários</a>
-        <a href="{{ url_for('lojas') }}">Lojas</a>
-        <a href="{{ url_for('nova_separacao') }}">Criar pedidos</a>
-        <a href="{{ url_for('listar_lotes') }}">Lotes</a>
-        <a href="{{ url_for('configuracoes') }}">Configurações</a>
-      {% endif %}
-      {% if g.user['role'] in ['admin', 'balanco'] %}
-      <a href="{{ url_for('relatorios') }}">Relatórios</a>
-      {% endif %}
+      {% if user_has_access(g.user, 'painel') %}<a href="{{ url_for('dashboard') }}">Painel</a>{% endif %}
+      {% if user_has_access(g.user, 'separacoes') %}<a href="{{ url_for('listar_separacoes') }}">Separações</a>{% endif %}
+      {% if user_has_access(g.user, 'estoque') %}<a href="{{ url_for('estoque') }}">Estoque</a>{% endif %}
+      {% if user_has_access(g.user, 'relatorios') %}<a href="{{ url_for('relatorios') }}">Relatórios</a>{% endif %}
+      {% if user_has_access(g.user, 'usuarios') %}<a href="{{ url_for('usuarios') }}">Usuários</a>{% endif %}
+      {% if user_has_access(g.user, 'lojas') %}<a href="{{ url_for('lojas') }}">Lojas</a>{% endif %}
+      {% if user_has_access(g.user, 'pedidos') %}<a href="{{ url_for('nova_separacao') }}">Criar pedidos</a>{% endif %}
+      {% if user_has_access(g.user, 'lotes') %}<a href="{{ url_for('listar_lotes') }}">Lotes</a>{% endif %}
+      {% if user_has_access(g.user, 'configuracoes') %}<a href="{{ url_for('configuracoes') }}">Configurações</a>{% endif %}
+      <a href="{{ url_for('minha_conta') }}">Minha conta</a>
       <a href="{{ url_for('logout') }}">Sair</a>
     </nav>
   </div>

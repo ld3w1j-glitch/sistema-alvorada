@@ -1262,6 +1262,73 @@ body {
   gap: 10px;
 }
 
+
+.stock-history-list {
+  display: grid;
+  gap: 12px;
+}
+
+.stock-history-item {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fff 0%, var(--surface) 100%);
+  padding: 14px;
+}
+
+.stock-history-main {
+  display: grid;
+  gap: 8px;
+}
+
+.stock-history-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.stock-history-desc {
+  font-size: 15px;
+}
+
+.stock-history-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.stock-history-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.stock-history-badge.is-positive {
+  background: var(--green-soft);
+  color: var(--green-dark);
+  border-color: rgba(90, 164, 71, 0.22);
+}
+
+.stock-history-badge.is-negative {
+  background: rgba(207, 78, 67, 0.10);
+  color: #9b3028;
+  border-color: rgba(207, 78, 67, 0.22);
+}
+
+.stock-history-badge.is-neutral {
+  background: var(--blue-soft);
+  color: var(--blue-text);
+  border-color: rgba(73, 121, 199, 0.22);
+}
+
 @media (max-width: 760px) {
   .stock-search-actions,
   .stock-item-metrics,
@@ -1272,4 +1339,41 @@ body {
   .stock-item-title {
     font-size: 18px;
   }
+}
+
+
+.stock-history-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stock-history-filter-actions {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 980px) {
+  .stock-history-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .stock-history-filters {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+.stock-export-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.stock-export-actions .btn {
+  min-width: 160px;
+  text-align: center;
 }

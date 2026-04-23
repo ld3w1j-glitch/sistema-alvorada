@@ -2,45 +2,131 @@
 {% block content %}
 <section class="main"><div class="wrap grid-2">
   <div class="card">
-    <h1 class="section-title">Usuários</h1>
+    <h1 class="section-title">Novo usuário</h1>
     <form method="post">
       <input type="text" name="nome" placeholder="Nome" required>
       <input type="text" name="username" placeholder="Login" required>
       <input type="password" name="password" placeholder="Senha" required>
+
       <select name="role" required>
-        <option value="admin">Admin</option>
         <option value="separador">Separador</option>
         <option value="conferente">Conferente</option>
         <option value="balanco">Balanço</option>
+        <option value="admin">Admin</option>
       </select>
+
+      <select name="permission_level" class="js-permission-level" required>
+        <option value="comum">Permissão comum</option>
+        <option value="admin">Permissão admin</option>
+      </select>
+
+      <div class="mini" style="margin-bottom:8px;">Acessos liberados</div>
+      <div class="user-access-grid js-access-grid" style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-bottom:14px;">
+        {% for access_key, access_label in access_options %}
+        <label class="check-line" style="margin:0;">
+          <input type="checkbox" name="access_rules" value="{{ access_key }}" {% if access_key in ['painel', 'separacoes'] %}checked{% endif %}>
+          {{ access_label }}
+        </label>
+        {% endfor %}
+      </div>
+
       <button type="submit">Salvar usuário</button>
     </form>
   </div>
+
   <div class="card">
     <h2 class="section-title">Cadastrados</h2>
-    <div class="table-responsive"><table>
-      <thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Status</th><th>Ação</th></tr></thead>
-      <tbody>
+    <div style="display:grid; gap:14px;">
       {% for user in users %}
-      <tr>
-        <td>{{ user.nome }}</td>
-        <td>{{ user.username }}</td>
-        <td><span class="{{ role_badge(user.role) }}">{{ user.role }}</span></td>
-        <td>{{ 'Ativo' if user.ativo else 'Inativo' }}</td>
-        <td class="actions-cell">
-          <form method="post" action="{{ url_for('alternar_usuario', user_id=user.id) }}">
-            <button class="btn-secondary" type="submit">{{ 'Desativar' if user.ativo else 'Ativar' }}</button>
-          </form>
-          <form method="post" action="{{ url_for('excluir_usuario', user_id=user.id) }}" onsubmit="return confirm('Excluir este usuário?');">
-            <button class="btn-danger" type="submit">Excluir</button>
-          </form>
-        </td>
-      </tr>
+      <form method="post" action="{{ url_for('salvar_usuario', user_id=user.id) }}" class="card" style="padding:16px; background:#faf7f2; border:1px solid #eadfce;">
+        <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; margin-bottom:12px;">
+          <div>
+            <strong>{{ user.nome }}</strong>
+            <div class="mini">Login: {{ user.username }}</div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
+              <span class="{{ role_badge(user.role) }}">{{ role_label(user.role) }}</span>
+              <span class="badge">{{ permission_level_label(user.permission_level, user.role) }}</span>
+              <span class="badge">{{ 'Ativo' if user.ativo else 'Inativo' }}</span>
+            </div>
+          </div>
+          <div class="mini">Acessos: {{ access_labels_for_user(user)|join(', ') }}</div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px;">
+          <input type="text" name="nome" value="{{ user.nome }}" placeholder="Nome" required>
+          <input type="text" name="username" value="{{ user.username }}" placeholder="Login" required>
+
+          <select name="role" required>
+            <option value="separador" {% if user.role == 'separador' %}selected{% endif %}>Separador</option>
+            <option value="conferente" {% if user.role == 'conferente' %}selected{% endif %}>Conferente</option>
+            <option value="balanco" {% if user.role == 'balanco' %}selected{% endif %}>Balanço</option>
+            <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+          </select>
+
+          <select name="permission_level" class="js-permission-level" required>
+            <option value="comum" {% if permission_level_label(user.permission_level, user.role) == 'Comum' %}selected{% endif %}>Permissão comum</option>
+            <option value="admin" {% if permission_level_label(user.permission_level, user.role) == 'Admin' %}selected{% endif %}>Permissão admin</option>
+          </select>
+        </div>
+
+        <div style="margin-top:10px;">
+          <div class="mini" style="margin-bottom:8px;">Acessos liberados</div>
+          {% set current_access = user_access_set(user) %}
+          <div class="user-access-grid js-access-grid" style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px;">
+            {% for access_key, access_label in access_options %}
+            <label class="check-line" style="margin:0;">
+              <input type="checkbox" name="access_rules" value="{{ access_key }}" {% if access_key in current_access %}checked{% endif %}>
+              {{ access_label }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <input type="password" name="nova_senha" placeholder="Nova senha (opcional)" style="margin-top:10px;">
+
+        <div class="actions-cell" style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="submit">Salvar alterações</button>
+        </div>
+      </form>
+
+      <div class="actions-cell" style="margin-top:-6px; margin-bottom:8px; display:flex; gap:8px; flex-wrap:wrap;">
+        <form method="post" action="{{ url_for('alternar_usuario', user_id=user.id) }}">
+          <button class="btn-secondary" type="submit">{{ 'Desativar' if user.ativo else 'Ativar' }}</button>
+        </form>
+        <form method="post" action="{{ url_for('excluir_usuario', user_id=user.id) }}" onsubmit="return confirm('Excluir este usuário?');">
+          <button class="btn-danger" type="submit">Excluir</button>
+        </form>
+      </div>
       {% else %}
-      <tr><td colspan="5" class="empty">Nenhum usuário.</td></tr>
+      <div class="empty">Nenhum usuário.</div>
       {% endfor %}
-      </tbody>
-    </table></div>
+    </div>
   </div>
 </div></section>
+
+<script>
+(function(){
+  document.querySelectorAll('form').forEach(function(form){
+    const select = form.querySelector('.js-permission-level');
+    const grid = form.querySelector('.js-access-grid');
+    if (!select || !grid) return;
+    const checks = Array.from(grid.querySelectorAll('input[type="checkbox"]'));
+
+    function syncAdminAccess(){
+      const isAdmin = select.value === 'admin';
+      checks.forEach(function(check){
+        if (isAdmin) {
+          check.checked = true;
+          check.disabled = true;
+        } else {
+          check.disabled = false;
+        }
+      });
+    }
+
+    select.addEventListener('change', syncAdminAccess);
+    syncAdminAccess();
+  });
+})();
+</script>
 {% endblock %}
